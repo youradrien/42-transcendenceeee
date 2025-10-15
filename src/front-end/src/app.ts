@@ -1,8 +1,12 @@
 import HomePage from './pages/home';
 import { Router } from '../router';
+import Play from './pages/play';
 import NTFoundPage from './pages/404';
 import AuthPage from './pages/auth';
-import Play from './pages/play';
+import Profile from './pages/profile';
+import Header from './pages/header';
+import Leaderboard from './pages/leaderboard';
+
 export class App {
   private router = new Router('app');
 
@@ -26,17 +30,26 @@ export class App {
 
   private setupRoutes(): void {
     this.router.addRoute('/', async () => {
-        return this.renderPage(HomePage, 'main-page');
+    
+          return this.renderPage(HomePage, 'main-page');
+   
     });
 
     this.router.addRoute('/auth', async () => {
         return this.renderPage(AuthPage, 'auth-page');
     });
 
-    this.router.addRoute('/play', () => {
-      return this.renderPage(Play, 'play-page');
+    this.router.addRoute('/play', async () => {
+        return this.renderPage(Play, 'play-page');
     });
 
+    this.router.addRoute('/leaderboard', async () => {
+        return this.renderPage(Leaderboard, 'leaderboard-page');
+    });
+
+    this.router.addRoute('/profile', async () => {
+        return this.renderPage(Profile, 'profile-page');
+    });
 
     // 🧱 catch-all fallback for unknown routes
     this.router.addRoute('*', async () => {
@@ -61,13 +74,26 @@ export class App {
             this.router.navigate('/auth');
             return;
         }
+        if(isAuthenticated && (id == 'auth-page'))
+        {
+            this.router.navigate('/');
+            return;
+        }
+        
+
 
         // complete DOM clear before every rendering
         const app = document.getElementById('app')!;
         while (app.firstChild) {
             app.removeChild(app.firstChild);
-        }  
+        }
 
+        // header
+        if(isAuthenticated){
+          const header = new Header('header', this.router);
+          const headerElement = await header.render();
+          app.appendChild(headerElement);
+        }
 
         const page = new PageClass(id, {
           navigate: (route: string) => this.router.navigate(route)

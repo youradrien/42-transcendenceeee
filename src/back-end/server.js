@@ -83,6 +83,7 @@ fastify.decorate("authenticate", async function(request, reply)
         }
 
         const decoded = await request.jwtVerify(token);
+        console.log('Decoded JWT:', decoded);
         request.user = decoded;
         await fastify.updateLastOnline(decoded.id); // Update last_online here
     } catch (err)

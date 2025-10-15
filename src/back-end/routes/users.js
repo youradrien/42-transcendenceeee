@@ -33,8 +33,6 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
             return "test akbar";
     });
 
-
-
     // REGISTER
     fastify.post('/api/register', async (request, reply) => {
         const data = request.body;
@@ -124,6 +122,7 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
         {
           if (!code_totp)
           {
+              // Envoyer erreur : le code totp envoyé dans le formulaire est vide
               return reply.status(401).send({success: false, error : '2fa_empty'});                   
           }
           else
@@ -160,8 +159,6 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
                 return ({success : false, error : "db_access"});
         }
     });
-
-
 
     // Permet d'activer le 2FA sur le compte et renvoie le qr code (ainsi que la clé secrete). Nécessite d'être connecté
     fastify.get('/api/2fa/setup', {preValidation: [fastify.authenticate]}, async (request, reply) => {
@@ -289,10 +286,31 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
             return reply.send({ success: true, username: request.user.username });
     });
 
+    fastify.get('/api/me-info', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+        try {
+            const u = request.user.username;
+
+            const user = await db.get(
+            "SELECT id, username, wins, losses FROM users WHERE username = ?",
+            [u]
+            );
+            console.log('JWT username:', `"${request.user.username}"`);
+            console.log(user);
+            console.log(u);
+            if (!user) {
+                return reply.status(404).send({ success: false, message: 'User not found' });
+            }
+            return reply.send({ success: true, user });
+        } catch (err) {
+            request.log.error(err);
+            return reply.status(500).send({ success: false, message: 'Internal server error' });
+        }
+    });
 
 
     // get all users
-    fastify.get('/api/users', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+    fastify.get('/api/leaderboard', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+        console.log("GETTING LEADERBOARD");
         try {
             const users = await db.all("SELECT id, username, avatar_url FROM users");
             return reply.send({ success: true, users });
@@ -302,8 +320,6 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
             return reply.status(500).send({ success: false, error: 'db_error' });
         }
     });
-
-
 
     // Retourne toutes les infos d'un profile a partir de son username ou ID
     fastify.get('/api/profile/:identifier', { preValidation: [fastify.authenticate] }, async (request, reply) => {
