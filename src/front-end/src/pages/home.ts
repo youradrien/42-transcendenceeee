@@ -34,7 +34,7 @@ export default class MainPage extends Page {
     content.style.width = '100%';
 
     // Fetch user and render their profile
-    const user = await this.fetchOwnUser();
+    const user =null; // await this.fetchOwnUser();
 
     if (user || true == true) {
       const profilePage = new Profile('profile-page', this.router);

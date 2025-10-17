@@ -9,7 +9,7 @@ export default class Header extends Page {
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.alignItems = 'center';
-    container.style.padding = '20px';
+    container.style.padding = '15px';
     container.style.backgroundColor = '#2b2b2bff';
     container.style.boxShadow = '0 4px 8px rgba(24, 24, 24, 1)';
     container.style.marginTop = '5px';
@@ -18,7 +18,6 @@ export default class Header extends Page {
     container.style.fontFamily = '"Press Start 2P", cursive'; // pixel font
 
     container.style.zIndex = '1000';
-
 
     // Inject inner HTML
     container.innerHTML = `
@@ -36,15 +35,6 @@ export default class Header extends Page {
         <button id="playBtn" >Play</button>
         <button id="leaderboardBtn" >Leaderboard</button>
         <button id="friendsBtn">Friends</button>
-        <nav style="width: 100%; text-align: center; margin-bottom: 30px;">
-            <span style="margin: 0 12px;">AAAAAAAA</span>
-            <span style="margin: 0 12px;">------</span>
-            <span style="margin: 0 12px;">----</span>
-            <span style="margin: 0 12px;">------------</span>
-            <span style="margin: 0 12px;">---</span>
-            <span style="margin: 0 12px;">--------</span>
-            <span style="float: right; margin-right: 20px; color: #0f0;">⮕</span>
-        </nav>
       </div>
     `;
 

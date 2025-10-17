@@ -13,7 +13,7 @@ const fastify = require('fastify')({   logger: {
       }
     }
   } });
-const { _INIT_DB } = require('./db.js'); // chemin relatif selon ton projet
+const { db, _INIT_DB } = require('./db.js'); // chemin relatif selon ton projet
 
 // global containers, for rooms ws (accessibles depuis toutes les routes)
 fastify.decorate("roomsMap", new Map());
@@ -30,10 +30,12 @@ fastify.register(cors, {
 });
 
 // JWT
+require('dotenv').config();
+const jwtSecret = process.env.JWT_SECRET;
 fastify.register(cookie);
 fastify.register(multipart);
 fastify.register(jwt, {
-        secret: 'laclesecrete_a_mettre_dans_fichier_env', // !!!!! ENV !!!
+        secret: jwtSecret || 'laclesecrete_a_mettre_dans_fichier_env', // !!!!! ENV !!!
         cookie: {
           cookieName: "token",
           signed : false
@@ -45,7 +47,7 @@ fastify.register(require('./routes/users.js'));
 // fastify.register(require('./routes/matchmaking.js'));
 
 
-// START SERV
+// START SERV, and link db
 const start = async () => {
     try {
       await _INIT_DB(); // ✅ DB init here <------------
@@ -57,6 +59,8 @@ const start = async () => {
     }
 };
 start();
+// ! important cuhh
+fastify.decorate('db', (db));
 
 // last time seen (user field)
 fastify.decorate('updateLastOnline', async function(userId) {

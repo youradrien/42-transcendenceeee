@@ -99,35 +99,26 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
         {
             return reply.status(400).send({success:false, error : 'username_or_password_empty'});
         }
-
         let user;
         try {
             user = await db.get("SELECT * FROM users WHERE username = ?", [username]);
-            if (!user)
-            {
+            if (!user){
                 return reply.status(401).send({success:false, error : 'username_not_exist'});
             }
         } catch (err){
             return reply.status(500).send({success: false, error : 'db_access'});                          
         }
-  
         const passwordIsValid = await bcrypt.compare(password, user.password);
-        if (!passwordIsValid)
-        {
+        if (!passwordIsValid){
             return reply.status(401).send({success:false, error : 'password_not_valid'});
         }
-
         // A faire : vérifier le code 2FA généré par Google Authenticator envoyé dans le body
         if (user.secret_totp)
         {
-          if (!code_totp)
-          {
-              // Envoyer erreur : le code totp envoyé dans le formulaire est vide
+          if (!code_totp){
               return reply.status(401).send({success: false, error : '2fa_empty'});                   
           }
-          else
-          {
-              // On verifie si le code envoyé est correct
+          else{
               const verified = speakeasy.totp.verify({
                       secret:user.secret_totp,
                       encoding: 'base32',
@@ -136,27 +127,24 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
               });
               if (!verified)
               {
-                      return reply.status(401).send({success: false, error : '2fa_code_not_valid'});
+                return reply.status(401).send({success: false, error : '2fa_code_not_valid'});
               }
           }
         }
-
-        // Update last_online after successful login
         await fastify.updateLastOnline(user.id);
-
-        // Génère un nouveau JWT
+        //nouveau JWT
         try {
-                const jwt_content = await getJWTContent(user.id);
-                const token_jwt = fastify.jwt.sign(jwt_content);
-                return reply.setCookie('token', token_jwt, {
-                        httpOnly: true,
-                        secure : false, // true for HTTPS
-                        sameSite : 'none',
-                        path : '/'
-                }).send({success: true});
+            const jwt_content = await getJWTContent(user.id);
+            const token_jwt = fastify.jwt.sign(jwt_content);
+            return reply.setCookie('token', token_jwt, {
+                    httpOnly: true,
+                    secure : false, // true for HTTPS
+                    sameSite : 'none',
+                    path : '/'
+            }).send({success: true});
         } catch (err)
         {
-                return ({success : false, error : "db_access"});
+            return ({success : false, error : "db_access"});
         }
     });
 
@@ -280,18 +268,21 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
     } );
 
 
+
     // renvoie mon pseudo (cookie test)
     fastify.get('/api/me', {preValidation: [fastify.authenticate]}, async (request, reply) => {
             await fastify.updateLastOnline(request.user.id);
             return reply.send({ success: true, username: request.user.username });
     });
 
+
+    // get ses propres infos
     fastify.get('/api/me-info', { preValidation: [fastify.authenticate] }, async (request, reply) => {
         try {
             const u = request.user.username;
 
             const user = await db.get(
-            "SELECT id, username, wins, losses FROM users WHERE username = ?",
+            "SELECT id, username, wins, last_online, created_at, losses FROM users WHERE username = ?",
             [u]
             );
             console.log('JWT username:', `"${request.user.username}"`);
@@ -308,6 +299,7 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
     });
 
 
+
     // get all users
     fastify.get('/api/leaderboard', { preValidation: [fastify.authenticate] }, async (request, reply) => {
         console.log("GETTING LEADERBOARD");
@@ -320,6 +312,7 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
             return reply.status(500).send({ success: false, error: 'db_error' });
         }
     });
+
 
     // Retourne toutes les infos d'un profile a partir de son username ou ID
     fastify.get('/api/profile/:identifier', { preValidation: [fastify.authenticate] }, async (request, reply) => {
