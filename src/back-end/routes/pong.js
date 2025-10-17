@@ -15,7 +15,7 @@ async function pong_routes(fastify, options)
     fastify.get('/api/pong/status', {preValidation: [fastify.authenticate]}, async (request, reply) => {
         return reply.send({ success: true, data: {
             activeRooms: fastify.p_rooms.size,
-            onlinePlayers: (14) + fastify.p_rooms.size * 2 // or count from user sessions
+            onlinePlayers:  fastify.p_rooms.size * 2 // or count from user sessions
         } });
     });
 

@@ -291,6 +291,23 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
     });
 
 
+    // online count
+    fastify.get('/api/users/online', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+        try {
+            const l_ago = (60) * 5; // (secondez) * minutes [5 minutes]
+            const row = await db.get(`
+                SELECT COUNT(*) as onlineCount FROM users
+                WHERE strftime('%s','now') - strftime('%s', last_online) < ${l_ago}
+            `);
+
+            return reply.send({ success: true, data: { online_players: row.onlineCount } });
+        } catch (err) {
+            request.log.error(err);
+            return reply.status(500).send({ success: false, error: 'db_error' });
+        }
+    });
+
+
     // get user (from his :username)
     fastify.get('/api/profile/:identifier', { preValidation: [fastify.authenticate] }, async (request, reply) => {
         const identifier = request.params.identifier;

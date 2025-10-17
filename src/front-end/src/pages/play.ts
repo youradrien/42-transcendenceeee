@@ -1,62 +1,86 @@
 import Page from '../template/page.ts';
-import SinglePong from '../component/singlePong.ts'; // Your component-based page
+import SinglePong from '../component/singlePong.ts';
 
 export default class PlayPage extends Page {
   async render(): Promise<HTMLElement> {
     const container = document.createElement('div');
     container.id = this.id;
 
-    const content = document.createElement('div');
-    content.style.width = '100%';
-    content.style.height = '100vh';
-    content.style.padding = '2rem';
-    content.style.textAlign = 'center';
+    container.innerHTML = `
+      <div id="play-content" style="
+        width: 100%;
+        height: 100vh;
+        padding: 2rem;
+        text-align: center;
+        font-family: 'Press Start 2P', cursive;
+        position: relative;
+      ">
+        <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
-    const header = document.createElement('h2');
-    header.innerText = '🎮 Play Pong';
-    content.appendChild(header);
+        <h2>🎮 Play Pong</h2>
+        <p id="player-status">Looking for players...</p>
 
-    // 🟢 Searching players display
-    const statusParagraph = document.createElement('p');
-    statusParagraph.innerText = 'Looking for players...';
-    content.appendChild(statusParagraph);
+        <div style="margin-top: 2rem; position: relative;">
+          <button id="singleBtn" style="margin: 1rem;">🎯 SINGLE-Player</button>
 
-    // Fetch number of players searching for games
+          <div style="display: inline-block; position: relative;">
+            <button id="multiBtn" style="margin: 1rem; position: relative;">
+              🚀 Queue for Match
+            </button>
+            <span id="queue-count" style="
+              position: absolute;
+              top: -10px;
+              right: -10px;
+              background: #00ff00;
+              color: black;
+              font-size: 10px;
+              padding: 4px 6px;
+              border-radius: 10px;
+              font-weight: bold;
+              box-shadow: 0 0 6px rgba(0,0,0,0.4);
+            ">0</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Fetch number of players searching
     try {
       const res = await fetch('http://localhost:3010/api/pong/status', {
         credentials: 'include'
       });
-      const { searchingPlayers } = await res.json();
-      console.log(searchingPlayers);
-      statusParagraph.innerText = `🟢 ${searchingPlayers} player(s) searching for a game`;
+      const data = await res.json();
+      const sss = container.querySelector('#player-status') as HTMLParagraphElement;
+      const qc = container.querySelector('#queue-count') as HTMLSpanElement;
+      const online = data?.data?.onlinePlayers ?? 0;
+      sss.innerText = `🟢 ${online} player(s) in queue`;
+      qc.innerText = String(online);
     } catch (err) {
-      statusParagraph.innerText = '⚠️ Could not load player status';
+      const sss = container.querySelector('#player-status') as HTMLParagraphElement;
+      sss.innerText = '⚠️ Could not load player status';
     }
 
-    // 🎯 Single Player Button
-    const singleBtn = document.createElement('button');
-    singleBtn.innerText = '🎯 SINGLE-Player';
-    singleBtn.style.margin = '1rem';
-    singleBtn.onclick = async () => {
-      const singlePage = new SinglePong('single-player', this.router);
-      const singleElement = await singlePage.render();
-
-      // Replace current content with single player game
+    // Single player button handler
+    const s = container.querySelector('#singleBtn') as HTMLButtonElement;
+    s.onclick = async () => {
+      const sp = new SinglePong('single-player', this.router);
+      const ss = await sp.render();
       container.innerHTML = '';
-      container.appendChild(singleElement);
+      container.appendChild(ss);
     };
-    content.appendChild(singleBtn);
 
-    // 🎮 Multiplayer Button
-    const multiBtn = document.createElement('button');
-    multiBtn.innerText = '🎮 Multiplayer';
-    multiBtn.style.margin = '1rem';
+    // Multiplayer (queue) button handler
+    const multiBtn = container.querySelector('#multiBtn') as HTMLButtonElement;
     multiBtn.onclick = () => {
-      this.router.navigate('/pong/multiplayer');
+      try {
+        // const socket = new WebSocket('ws://localhost:3010/api/pong');
+        // const res = await fetch('http://localhost:3010/api/pong/status', {
+        //   credentials: 'include'
+        // });
+      } catch (err) {
+      }
     };
-    content.appendChild(multiBtn);
 
-    container.appendChild(content);
     return container;
   }
 }
