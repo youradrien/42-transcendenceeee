@@ -13,7 +13,6 @@ export default class UserProfilePage extends Page {
   async render(): Promise<HTMLElement> {
     const container = document.createElement('div');
     container.id = this.id;
-
     container.style.display = 'flex';
     container.style.flexDirection = 'column';
     container.style.alignItems = 'center';

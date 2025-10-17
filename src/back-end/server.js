@@ -3,6 +3,7 @@ const cookie = require('@fastify/cookie');
 const jwt = require('@fastify/jwt');
 const cors = require('@fastify/cors');
 const multipart = require ('@fastify/multipart');
+const websocket = require('@fastify/websocket');
 const fastify = require('fastify')({   logger: {
     transport: {
       target: 'pino-pretty',
@@ -15,20 +16,20 @@ const fastify = require('fastify')({   logger: {
   } });
 const { db, _INIT_DB } = require('./db.js'); // chemin relatif selon ton projet
 
+
 // global containers, for rooms ws (accessibles depuis toutes les routes)
-fastify.decorate("roomsMap", new Map());
-fastify.decorate("matchsMap", new Map());
-fastify.decorate("closedWsUsersSet", new Set());
+fastify.decorate("p_rooms", new Map());   // roomId -> [player1, player2]
+fastify.decorate("p_games", new Map());        // matchId -> game states
+fastify.decorate("p_waitingPlayers", new Map());        // matchId -> game state
 
 
-// register CORS (our frontend)
+// CORS (our frontend)
 fastify.register(cors, {
   origin: 'http://localhost:5173', // ✅ must match EXACTLY
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 });
-
 // JWT
 require('dotenv').config();
 const jwtSecret = process.env.JWT_SECRET;
@@ -41,10 +42,10 @@ fastify.register(jwt, {
           signed : false
         }
 });
-
-// register routes
+// websocket
+fastify.register(websocket);
+// routes (REST api)
 fastify.register(require('./routes/users.js'));
-// fastify.register(require('./routes/matchmaking.js'));
 
 
 // START SERV, and link db
@@ -61,6 +62,7 @@ const start = async () => {
 start();
 // ! important cuhh
 fastify.decorate('db', (db));
+
 
 // last time seen (user field)
 fastify.decorate('updateLastOnline', async function(userId) {
@@ -85,9 +87,8 @@ fastify.decorate("authenticate", async function(request, reply)
         {
           return reply.code(401).send({success:false, error:"no_token_in_cookie"})
         }
-
         const decoded = await request.jwtVerify(token);
-        console.log('Decoded JWT:', decoded);
+        // console.log('Decoded JWT:', decoded);
         request.user = decoded;
         await fastify.updateLastOnline(decoded.id); // Update last_online here
     } catch (err)
@@ -97,8 +98,6 @@ fastify.decorate("authenticate", async function(request, reply)
 });
 
 
-
-
 // Route GET /api (pour tests uniquement)
 fastify.get('/api', async (request, reply) => {
   return {
@@ -106,3 +105,4 @@ fastify.get('/api', async (request, reply) => {
     message: 'pong de ses morts'
   };
 });
+
