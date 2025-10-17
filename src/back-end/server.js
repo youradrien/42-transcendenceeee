@@ -18,8 +18,7 @@ const { db, _INIT_DB } = require('./db.js'); // chemin relatif selon ton projet
 
 
 // global containers, for rooms ws (accessibles depuis toutes les routes)
-fastify.decorate("p_rooms", new Map());   // roomId -> [player1, player2]
-fastify.decorate("p_games", new Map());        // matchId -> game states
+fastify.decorate("p_rooms", new Map());   // game rooms -> [player1, player2]
 fastify.decorate("p_waitingPlayers", new Map());        // matchId -> game state
 
 
@@ -44,8 +43,9 @@ fastify.register(jwt, {
 });
 // websocket
 fastify.register(websocket);
-// routes (REST api)
+// routes (REST api, ws)
 fastify.register(require('./routes/users.js'));
+fastify.register(require('./routes/pong.js'));
 
 
 // START SERV, and link db
