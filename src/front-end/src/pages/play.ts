@@ -5,7 +5,6 @@ export default class PlayPage extends Page {
   async render(): Promise<HTMLElement> {
     const container = document.createElement('div');
     container.id = this.id;
-
     container.innerHTML = `
       <div id="play-content" style="
         width: 100%;
@@ -17,8 +16,9 @@ export default class PlayPage extends Page {
       ">
         <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
-        <h2>🎮 Play Pong</h2>
+        <h1>🎮 Play Pong</h1>
         <p id="player-status">Looking for players...</p>
+        <p id="rooms-status">Looking for any rooms?...</p>
 
         <div style="margin-top: 2rem; position: relative;">
           <button id="singleBtn" style="margin: 1rem;">🎯 SINGLE-Player</button>
@@ -44,23 +44,32 @@ export default class PlayPage extends Page {
       </div>
     `;
 
-    // Fetch number of players searching
+    // stats of current serv state
+    // so : players in queue, rooms, total online plyr count
     try {
-      const res = await fetch('http://localhost:3010/api/pong/status', {
-        credentials: 'include'
-      });
-      const data = await res.json();
-      const sss = container.querySelector('#player-status') as HTMLParagraphElement;
-      const qc = container.querySelector('#queue-count') as HTMLSpanElement;
-      const online = data?.data?.onlinePlayers ?? 0;
-      sss.innerText = `🟢 ${online} player(s) in queue`;
-      qc.innerText = String(online);
+        const res = await fetch('http://localhost:3010/api/pong/status', {
+          credentials: 'include'
+        });
+        const data = await res.json();
+        // console.log(data);
+        const sss = container.querySelector('#player-status') as HTMLParagraphElement;
+        const qc = container.querySelector('#queue-count') as HTMLSpanElement;
+        const online = data?.data?.queuedPlayers ?? 0;
+        if(data?.data?.joinedQueue)
+        {
+            const q_btn = container.querySelector('#multiBtn') as HTMLButtonElement;
+            q_btn.style.backgroundColor = '#00cc44';  // Green background
+            q_btn.style.color = 'white';              // White text
+            q_btn.innerText = '✅ Queued!';
+        }
+        sss.innerText = `🟢 ${online} player(s) in queue`;
+        qc.innerText = String(online);
     } catch (err) {
-      const sss = container.querySelector('#player-status') as HTMLParagraphElement;
-      sss.innerText = '⚠️ Could not load player status';
+        const sss = container.querySelector('#player-status') as HTMLParagraphElement;
+        sss.innerText = '⚠️ Could not load player status';
     }
 
-    // Single player button handler
+    // single player btn handler
     const s = container.querySelector('#singleBtn') as HTMLButtonElement;
     s.onclick = async () => {
       const sp = new SinglePong('single-player', this.router);
@@ -69,14 +78,38 @@ export default class PlayPage extends Page {
       container.appendChild(ss);
     };
 
-    // Multiplayer (queue) button handler
-    const multiBtn = container.querySelector('#multiBtn') as HTMLButtonElement;
-    multiBtn.onclick = () => {
+    // (queue) btn handler
+    const queue_btn = container.querySelector('#multiBtn') as HTMLButtonElement;
+    queue_btn.onclick = async () => {
       try {
-        // const socket = new WebSocket('ws://localhost:3010/api/pong');
-        // const res = await fetch('http://localhost:3010/api/pong/status', {
-        //   credentials: 'include'
-        // });
+        const socket = new WebSocket('ws://localhost:3010/api/pong/ws');
+
+        socket.onmessage = (msg) => {
+            const data = JSON.parse(msg.data);
+            // console.log(data);
+            const sss = container.querySelector('#player-status') as HTMLParagraphElement;
+            const qc = container.querySelector('#queue-count') as HTMLSpanElement;
+            const queueBtn = container.querySelector('#multiBtn') as HTMLButtonElement;
+
+            if(data?.queueLength >= 0){
+              qc.innerText = String(data?.queueLength);
+              sss.innerText = `🟢 ${data?.queueLength} player(s) in queue`;
+            }
+            if(data?.type == "waiting")
+            {
+                queueBtn.style.backgroundColor = '#00cc44';  // Green background
+                queueBtn.style.color = 'white';              // White text
+                queueBtn.innerText = '✅ Queued!';
+            }
+            if(data?.type == "waiting-update")
+            {
+                sss.innerText = `🟢 ${data?.queueLength} player(s) in queue`;
+            }
+            if(data?.type == "error")
+            {
+              alert(data.message);
+            }
+        };
       } catch (err) {
       }
     };

@@ -7,7 +7,7 @@ const qrcode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const { pipeline } = require ('stream/promises');
-const { db } = require('../db.js'); // chemin relatif selon ton projet
+const { db } = require('../db.js'); // chemin relatif
 
 const { OAuth2Client } = require('google-auth-library');
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // A mettre dans un fichier .env !!!!
