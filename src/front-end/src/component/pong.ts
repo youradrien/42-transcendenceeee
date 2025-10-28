@@ -73,7 +73,7 @@ export default class SinglePong extends Page {
     };
     if(this.multiplayer)
     {
-        g_.
+      
     }
     const PONG_ART = 
       `██████╗ ███████╗███╗   ██╗ ██████╗ 

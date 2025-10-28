@@ -274,15 +274,18 @@ const start_game_loop = (game) =>
         }
         // paddle collisions
         // left paddle
-        if (game.ball.x <= game.paddleWidth &&
-            game.ball.y >= game.paddles.p1 &&
-            game.ball.y <= game.paddles.p1 + game.paddleHeight) {
+        if (game.ball.x >= 20 + game.paddleWidth &&
+            game.ball.x <= 20 - game.paddleWidth &&
+            game.ball.y >= game.paddles.p2 &&
+            game.ball.y <= game.paddles.p2 + game.paddleHeight
+        ){
             game.ball.vx = Math.abs(game.ball.vx); // bounce right
         }
         // right paddle
-        if (game.ball.x >= game.width - game.paddleWidth &&
-            game.ball.y >= game.paddles.p2 &&
-            game.ball.y <= game.paddles.p2 + game.paddleHeight) {
+        if (game.ball.x >= (game.width - 30) - game.paddleWidth &&
+            game.ball.x >= (game.width - 30) + game.paddleWidth &&
+            game.ball.y >= game.paddles.p1 &&
+            game.ball.y <= game.paddles.p1 + game.paddleHeight) {
             game.ball.vx = -Math.abs(game.ball.vx); // bounce left
         }
 
@@ -300,7 +303,7 @@ const start_game_loop = (game) =>
                 );
             }
         });
-  }, 1000 / 70); // 60 FPS
+  }, 1000 / 60); // 60 FPS
   game.interval = interval;
 }
 
