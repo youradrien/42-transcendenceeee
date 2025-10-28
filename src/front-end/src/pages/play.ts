@@ -3,6 +3,7 @@ import Pong from '../component/pong.ts';
 
 export default class PlayPage extends Page {
   async render(): Promise<HTMLElement> {
+    let joined_game: boolean = false;
     const container = document.createElement('div');
     container.id = this.id;
     container.innerHTML = `
@@ -19,13 +20,17 @@ export default class PlayPage extends Page {
         <h1 style="margin-bottom: 1rem; font-size: 32px;">Pong 🎮</h1>
         <p style="margin-bottom: 0.2rem;  font-size: 14px;" id="player-status">Looking for players...</p>
         <p style="margin-bottom: 0.2rem;  font-size: 14px;" id="rooms-status">Looking for any rooms?...</p>
-        <div id="active-games" style="margin-top: 3rem;
-            min-width: 500px; 
-            background-color: rgba(35, 35, 35, 0.5);
-        ">
-          <h2 style="margin-bottom: 1rem; font-size: 32px;">🏓 Active Games</h2>
-          <div id="game-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
-        </div>
+
+        ${!joined_game ? `
+            <div id="active-games" style="margin-top: 3rem;
+                min-width: 500px; 
+                background-color: rgba(35, 35, 35, 0.5);
+            ">
+              <h2 style="margin-bottom: 1rem; font-size: 32px;">🏓 Active Games</h2>
+              <div id="game-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+            </div>
+          `
+        : ""}
 
         <div style="margin-top: 2rem; position: relative;">
           <button id="singleBtn" style="margin: 1rem;">🎯 SINGLE-Player</button>
@@ -51,6 +56,8 @@ export default class PlayPage extends Page {
 
         <h1 id="game-join-h1" style="margin-bottom: 1rem; font-size: 30px;">JOINING ' '</h1>
         <h2 id="game-counter" style="margin-bottom: 1rem; font-size: 22px;">. . . . .</h2>
+
+        <div id="game-area"> </div>
       </div>
     `;
     const p_st = container.querySelector('#player-status') as HTMLParagraphElement;
@@ -58,7 +65,8 @@ export default class PlayPage extends Page {
     const q_btn = container.querySelector('#multiBtn') as HTMLButtonElement;
     const gCounter = container.querySelector('#game-counter') as HTMLButtonElement;
     const gJntitle = container.querySelector('#game-join-h1') as HTMLButtonElement;
-
+    let socket: WebSocket; // <-- wsocket var 
+    let nahh: boolean = false;
     // whole func dedicated to update active games data
     const fetch_games = async () => {
         try {
@@ -107,15 +115,50 @@ export default class PlayPage extends Page {
       } catch (err) {
         console.error('Failed to fetch active games:', err);
       }
-    }
+    };
+
+    // start either multiplayer or single player
+    const start_game = async (game_mode: boolean) => 
+    {
+        joined_game = (true);
+        p_st.style.display = 'none';
+        r_st.style.display = 'none';
+        gCounter.style.display = 'none';
+        gJntitle.style.display = 'none';
+        if(game_mode) // multiplayer
+        {
+          // component
+          const pong_page = new Pong("ahh", this.router, {
+            multiplayer : true,
+            socket: (socket)
+          });
+
+          // render && append 
+          const pong_container = await pong_page.render();
+
+          // For example, append to a div with id "gameArea"
+          const game_area = document.querySelector('#game-area');
+          if (game_area) {
+              // del prev games
+              game_area.innerHTML = '';
+              game_area.appendChild(pong_container);
+              q_btn.style.backgroundColor = '#cc0000ff';  // Green background
+              q_btn.style.color = 'white';              // White text
+              q_btn.innerText = '🔌 Disconnect';
+          }
+      }else
+      {
+
+      }
+    };
     // (queue) btn handler
     q_btn.onclick = async () => {
       try {
-        const socket = new WebSocket('ws://localhost:3010/api/pong/ws');
-
+        if(nahh)
+            return; 
+        socket = new WebSocket('ws://localhost:3010/api/pong/ws');
         socket.onmessage = async (msg) => {
             const data = JSON.parse(msg.data);
-            // console.log(data);
             const qc = container.querySelector('#queue-count') as HTMLSpanElement;
             const queueBtn = container.querySelector('#multiBtn') as HTMLButtonElement;
             if(data?.queueLength >= 0){
@@ -130,9 +173,7 @@ export default class PlayPage extends Page {
             }
             if(data?.type == "creating")
             {
-                queueBtn.style.backgroundColor = '#1383e4ff'; 
-                queueBtn.style.color = 'white';            
-                queueBtn.innerText = '🔵 creating game...';
+
                 r_st.innerText = `🔵 ${data?.roomsLength} currently active pong room(s)...`;
                 qc.innerText = '';
                 await fetch_games();
@@ -140,9 +181,16 @@ export default class PlayPage extends Page {
                 let _time_l = data?.countdown_v;
                 if(data?.is_a_comeback){
                     gJntitle.innerHTML = "JOINING BACK YOUR GAME!";
+                    q_btn.style.backgroundColor = '#ffbb00ff';  // Green background
+                    q_btn.style.color = 'black';              // White text
+                    q_btn.innerText = '⚡ joining. .';
                 }else{
                     gJntitle.innerHTML = "STARTING....";
+                    queueBtn.style.backgroundColor = '#1383e4ff'; 
+                    queueBtn.style.color = 'white';            
+                    queueBtn.innerText = '🔵 creating game...';
                 }
+                nahh = true;
                 for(let i = 0; i < (_time_l); i++){
                     const t_left = _time_l - i;
                     setTimeout(() => {
@@ -152,6 +200,7 @@ export default class PlayPage extends Page {
                         `WELCOME-BACK 🔄 ${t_left}sec (prepare urself bro)`;
                     }, i * 1000);
                 }
+              
             }
             if(data?.type == "waiting-update")
             {
@@ -165,23 +214,11 @@ export default class PlayPage extends Page {
             }
             if(data?.type == "start")
             {
-              console.log(data);
-              // Dynamically import or use your SinglePong component
-              const pongPage = new SinglePong();
-
-              // Render it and append to some container
-              const pongContainer = await pongPage.render();
-
-              // For example, append to a div with id "gameArea"
-              const gameArea = document.querySelector('#gameArea');
-              if (gameArea) {
-                  // Clear previous content if needed
-                  gameArea.innerHTML = '';
-                  gameArea.appendChild(pongContainer);
-              }
+              start_game(true);
             }
         };
       } catch (err) {
+        console.log(err);
       }
     };
 
@@ -191,6 +228,9 @@ export default class PlayPage extends Page {
         await fetch_games();
         gCounter.innerHTML = "";
         gJntitle.innerHTML = "";
+        const ga = document.querySelector('#game-area');
+        if (ga)
+          ga.innerHTML = '';
         const res = await fetch('http://localhost:3010/api/pong/status', {
           credentials: 'include'
         });
@@ -208,7 +248,6 @@ export default class PlayPage extends Page {
         qc.innerText = String(online);
         if(data?.data?.alr_in_game){
             // auto click the queue-up btn
-            // console.log("manually jnin back");
             q_btn.click(); // <- this will trigger everythn needed by itself cuh
         }
     } catch (err) {
@@ -219,14 +258,8 @@ export default class PlayPage extends Page {
     // single player btn handler
     const s = container.querySelector('#singleBtn') as HTMLButtonElement;
     s.onclick = async () => {
-      const sp = new Pong('single-player', this.router);
-      const ss = await sp.render();
-      container.innerHTML = '';
-      container.appendChild(ss);
+        await start_game(false); // <-- single player pong
     };
-
-
-
 
     return container;
   }

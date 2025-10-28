@@ -1,15 +1,16 @@
 import Page from '../template/page.ts';
 
-
 export default class SinglePong extends Page {
   private multiplayer: boolean;
   private socket?: WebSocket;
-
 
   constructor(id: string, router: { navigate: (path: string) => void }, options?: any) {
     super(id, router, options); // ✅ Pass required args
     this.multiplayer = options?.multiplayer ?? false;
     this.socket = options?.socket;
+
+    console.log(this.socket);
+    console.log(this.multiplayer);
   }
 
   async render(): Promise<HTMLElement> {
@@ -35,43 +36,45 @@ export default class SinglePong extends Page {
     CONTAINER.appendChild(_score);
     const c = document.createElement('canvas');
     c.id = 'pongCanvas';
-    c.width = 900;  // Set your desired width
+    c.width = 800;  // Set your desired width
     c.height = 600; // Set your desired height
     CONTAINER.appendChild(c);
 
-    // Start button
-    const startButton = document.createElement('button');
-    startButton.textContent = 'Start Game';
-    startButton.id = 'startGameBtn';
-    CONTAINER.appendChild(startButton);
+    // [Start || leave] btn
+    const s = document.createElement('button');
+    if(this.multiplayer)
+    {
+      s.textContent = ' ';
+    }else
+      s.textContent = 'Start Game';
+    s.id = 'startGameBtn';
+    CONTAINER.appendChild(s);
 
-    this.initPong(c, startButton, p1, p2);
+    this.initPong(c, s, p1, p2);
     return CONTAINER;
   }
 
   private initPong(canvas: HTMLCanvasElement, startButton: HTMLButtonElement, p1ScoreEl: HTMLElement, p2ScoreEl: HTMLElement): void {
     const ctx = canvas.getContext('2d')!;
     if (!ctx) {
-      console.error('Could not get 2D rendering context');
       return;
     }
 
-    // Game constants
-    const PADDLE_WIDTH = 10;
-    const PADDLE_HEIGHT = 80;
-    const PADDLE_SPEED = 5;
-    const BALL_RADIUS = 10;
-    const DEFAULT_BALL_SPEED = 5;
-
-    // Game state
-    let gameStarted = false;
-    const gameState = {
+    // [GAME] state...
+    // and constants
+    let g_started = false;
+    const PADDLE_WIDTH = 10, PADDLE_HEIGHT = 80, PADDLE_SPEED = 5;
+    const BALL_RADIUS = 10, DEFAULT_BALL_SPEED = 5;
+    const _g = {
       ball: { x: canvas.width / 2, y: canvas.height / 2, speedX: DEFAULT_BALL_SPEED, speedY: DEFAULT_BALL_SPEED },
       paddles: { player1Y: canvas.height / 2 - PADDLE_HEIGHT / 2, player2Y: canvas.height / 2 - PADDLE_HEIGHT / 2 },
       score: { player1: 0, player2: 0 },
       keys: { w: false, s: false, ArrowUp: false, ArrowDown: false, ' ': false },
     };
-
+    if(this.multiplayer)
+    {
+        g_.
+    }
     const PONG_ART = 
       `██████╗ ███████╗███╗   ██╗ ██████╗ 
       ██╔══██╗██║   ██║████╗  ██║██╔════╝ 
@@ -81,79 +84,126 @@ export default class SinglePong extends Page {
       ╚═╝      ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝`;
 
     startButton.addEventListener('click', () => {
-      if (!gameStarted) {
-        gameStarted = true;
-        reset_ball(true);
+      if(this.multiplayer)
+      {
+        console.log("leave");
+      }else
+      {
+        if(!g_started) {
+          g_started = true;
+          reset_ball(true);
+        }
       }
     });
 
     const reset_ball = (initialReset = false) => {
-      gameState.ball.x = canvas.width / 2;
-      gameState.ball.y = canvas.height / 2;
-      // Alternate starting direction
-      gameState.ball.speedX = initialReset ? DEFAULT_BALL_SPEED : -gameState.ball.speedX;
-      gameState.ball.speedY = DEFAULT_BALL_SPEED;
+      _g.ball.x = canvas.width / 2;
+      _g.ball.y = canvas.height / 2;
+      _g.ball.speedX = initialReset ? DEFAULT_BALL_SPEED : -_g.ball.speedX;
+      _g.ball.speedY = DEFAULT_BALL_SPEED;
     };
 
+    const treat_socket = async () => 
+    {
+      if(!this.socket)
+          return ;
+      this.socket.addEventListener('message', async (msg) => {
+        const data = JSON.parse(msg.data);
+        // handle queue, creating, etc...
+        if (data?.type === "game_state"){
+            if(data?.ball)
+            {
+              _g.ball.x = data?.ball.x;
+              _g.ball.y = data?.ball.y;
+            }
+            if(data?.scores)
+            {
+              _g.score.player1 = data?.scores.p1;
+              _g.score.player2 = data?.scores.p2;
+
+              p1ScoreEl.textContent = `Player 1: ${_g.score.player1}`;
+              p2ScoreEl.textContent = `Player 2: ${_g.score.player2}`;
+            }
+            if(data?.paddles)
+            {
+              _g.paddles.player1Y = data?.paddles.p1;
+              _g.paddles.player2Y = data?.paddles.p2;
+            }
+        }
+      });
+
+    }
+    treat_socket();
+
     const update = () => {
-      if (!gameStarted) return;
+      if(this.multiplayer)
+      {
+        if(!this.socket)
+            return;
+        // update() state happens in tereat_socket() via ws
+        // only keyboard inputs are sent in this update() loop
+        let direction = null;
+        if (_g.keys.ArrowUp){
+          direction = "up";
+        }
+        if(_g.keys.ArrowDown){
+          direction = "down";
+        }
+        if(direction)
+        {
+          this.socket.send(JSON.stringify({
+              type: "paddle_move",
+              direction: direction
+          }));
+        }
+      }else
+      {
+        if (!g_started) return;
 
-      // Move ball
-      gameState.ball.x += gameState.ball.speedX;
-      gameState.ball.y += gameState.ball.speedY;
+        // ball
+        _g.ball.x += _g.ball.speedX;
+        _g.ball.y += _g.ball.speedY;
 
-      // Move paddles
-      if (gameState.keys.w) gameState.paddles.player1Y -= PADDLE_SPEED;
-      if (gameState.keys.s) gameState.paddles.player1Y += PADDLE_SPEED;
-      if (gameState.keys.ArrowUp) gameState.paddles.player2Y -= PADDLE_SPEED;
-      if (gameState.keys.ArrowDown) gameState.paddles.player2Y += PADDLE_SPEED;
+        // paddles
+        if (_g.keys.ArrowUp && _g.paddles.player2Y > 0 + PADDLE_SPEED) _g.paddles.player2Y -= PADDLE_SPEED;
+        if (_g.keys.ArrowDown &&  _g.paddles.player2Y < canvas.height - PADDLE_SPEED) _g.paddles.player2Y += PADDLE_SPEED;
 
-      // Clamp paddles to canvas
-      gameState.paddles.player1Y = Math.max(0, Math.min(gameState.paddles.player1Y, canvas.height - PADDLE_HEIGHT));
-      gameState.paddles.player2Y = Math.max(0, Math.min(gameState.paddles.player2Y, canvas.height - PADDLE_HEIGHT));
+        // ball -> top/bottom walls
+        if (_g.ball.y + BALL_RADIUS > canvas.height || _g.ball.y - BALL_RADIUS < 0) {
+          _g.ball.speedY = -_g.ball.speedY;
+        }
 
-      // Ball collision with top/bottom walls
-      if (gameState.ball.y + BALL_RADIUS > canvas.height || gameState.ball.y - BALL_RADIUS < 0) {
-        gameState.ball.speedY = -gameState.ball.speedY;
+        _paddle_collision(_g.paddles.player1Y, 20 + PADDLE_WIDTH, 1);
+        _paddle_collision(_g.paddles.player2Y, canvas.width - 30, -1);
+
+        if (_g.ball.x + BALL_RADIUS > canvas.width) {
+          _g.score.player1++;
+          p1ScoreEl.textContent = `Player 1: ${_g.score.player1}`;
+          _g.ball.speedX = - (_g.ball.speedX);
+        } else if (_g.ball.x - BALL_RADIUS < 0) {
+          _g.score.player2++;
+          p2ScoreEl.textContent = `Player 2: ${_g.score.player2}`;
+          _g.ball.speedX = - (_g.ball.speedX);
+        }
       }
 
-      // Ball collision with paddles
-      _paddle_collision(gameState.paddles.player1Y, 20 + PADDLE_WIDTH, 1);
-      _paddle_collision(gameState.paddles.player2Y, canvas.width - 30, -1);
-
-      // Score detection
-      if (gameState.ball.x + BALL_RADIUS > canvas.width) {
-        gameState.score.player1++;
-        p1ScoreEl.textContent = `Player 1: ${gameState.score.player1}`;
-        gameStarted = false;
-        reset_ball();
-      } else if (gameState.ball.x - BALL_RADIUS < 0) {
-        gameState.score.player2++;
-        p2ScoreEl.textContent = `Player 2: ${gameState.score.player2}`;
-        gameStarted = false;
-        reset_ball();
-      }
     };
 
     const _paddle_collision = (paddleY: number, paddleX: number, direction: 1 | -1) => {
-      const ball = gameState.ball;
-      const paddleCollision =
-        direction === 1
-          ? ball.x - BALL_RADIUS < paddleX
-          : ball.x + BALL_RADIUS > paddleX;
+        const b = _g.ball;
+        const paddleCollision = direction === 1
+            ? b.x - BALL_RADIUS < paddleX
+            : b.x + BALL_RADIUS > paddleX;
 
-      if (paddleCollision && ball.y > paddleY && ball.y < paddleY + PADDLE_HEIGHT) {
-        const relativeIntersectY = paddleY + PADDLE_HEIGHT / 2 - ball.y;
-        const normalizedIntersectY = relativeIntersectY / (PADDLE_HEIGHT / 2);
-        const bounceAngle = normalizedIntersectY * (Math.PI / 3); // Max 60 degrees
+        if (paddleCollision && b.y > paddleY && b.y < paddleY + PADDLE_HEIGHT)
+        {
+            const inter_y = ( paddleY + PADDLE_HEIGHT / 2 - b.y) / (PADDLE_HEIGHT / 2);
 
-        ball.speedX = DEFAULT_BALL_SPEED * Math.cos(bounceAngle) * direction;
-        ball.speedY = DEFAULT_BALL_SPEED * -Math.sin(bounceAngle);
-
-        // Increase speed slightly on hit
-        ball.speedX *= 1.05;
-        ball.speedY *= 1.05;
-      }
+            b.speedX = DEFAULT_BALL_SPEED * Math.cos(inter_y * (Math.PI / 3)) * direction;
+            b.speedY = DEFAULT_BALL_SPEED * -Math.sin(inter_y * (Math.PI / 3));
+            b.speedX *= 1.025;
+            b.speedY *= 1.025;
+        }
     };
 
     const draw = () => {
@@ -179,11 +229,11 @@ export default class SinglePong extends Page {
       // ball
       ctx.fillStyle = 'white';
       ctx.beginPath();
-      ctx.arc(gameState.ball.x, gameState.ball.y, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.arc(_g.ball.x, _g.ball.y, BALL_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       // paddles
-      ctx.fillRect(20, gameState.paddles.player1Y, PADDLE_WIDTH, PADDLE_HEIGHT);
-      ctx.fillRect(canvas.width - 30, gameState.paddles.player2Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+      ctx.fillRect(20, _g.paddles.player1Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+      ctx.fillRect(canvas.width - 30, _g.paddles.player2Y, PADDLE_WIDTH, PADDLE_HEIGHT);
     };
 
     const gameLoop = () => {
@@ -194,14 +244,14 @@ export default class SinglePong extends Page {
 
     // Event Listeners
     const handleKeyEvent = (e: KeyboardEvent, isDown: boolean) => {
-      if (e.key === ' ' && isDown && !gameStarted) {
-        e.preventDefault(); // Prevent scrolling
-        gameStarted = true;
+      if (e.key === ' ' && isDown && !g_started) {
+        e.preventDefault();
+        g_started = true;
         reset_ball(true);
       }
       // Check for movement keys
       else if (e.key === 'w' || e.key === 's' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        (gameState.keys as any)[e.key] = isDown;
+        (_g.keys as any)[e.key] = isDown;
       }
     };
     document.addEventListener('keydown', (e) => handleKeyEvent(e, true));
