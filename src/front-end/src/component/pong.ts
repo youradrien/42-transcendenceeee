@@ -3,31 +3,66 @@ import Page from '../template/page.ts';
 export default class SinglePong extends Page {
   private multiplayer: boolean;
   private socket?: WebSocket;
+  private game_data?: any;
 
   constructor(id: string, router: { navigate: (path: string) => void }, options?: any) {
     super(id, router, options); // ✅ Pass required args
     this.multiplayer = options?.multiplayer ?? false;
     this.socket = options?.socket;
+    this.game_data = options?.game_data;
 
     console.log(this.socket);
-    console.log(this.multiplayer);
+    // (this.game_data);
+    // console.log(this.multiplayer);
+    // console.log(options);
   }
 
   async render(): Promise<HTMLElement> {
     const CONTAINER = document.createElement('div');
     CONTAINER.id = this.id;
+    CONTAINER.style.display = 'flex';
+    CONTAINER.style.flexDirection = 'column';
+    CONTAINER.style.alignItems = 'center';
+    CONTAINER.style.justifyContent = 'center';
+    CONTAINER.style.height = '100vh';
+    CONTAINER.style.textAlign = 'center';
 
     const _score = document.createElement('div');
     _score.style.display = 'flex';
     _score.style.justifyContent = 'space-between';
     _score.style.width = '800px';
     _score.style.marginBottom = '1rem';
-    _score.style.fontSize = '2rem';
+    _score.style.marginTop = '4rem';
+    _score.style.fontSize = '1.25rem'; 
+    _score.style.letterSpacing = '1px';
+    _score.id = 'score';
 
     const p1 = document.createElement('span');
     p1.id = 'player1-score';
     p1.textContent = 'Player 1: 0';
     _score.appendChild(p1);
+
+    // Max score in the middle
+    const max_score = document.createElement('span');
+    max_score.id = 'max-score';
+    max_score.textContent = `Max Score: ${this.game_data ? this.game_data.max_score: 20}`;
+    max_score.style.opacity = '0.7';
+    max_score.style.fontSize = '0.85rem';
+    max_score.style.flex = '1';
+    max_score.style.textAlign = 'center';
+    _score.appendChild(max_score);
+    // [Start || leave] btn
+    const s = document.createElement('button');
+    if(this.multiplayer)
+    {
+      s.textContent = 'GIVE-UP';
+      s.style.backgroundColor = '#1383e4ff';
+      s.style.color = '#0000000';
+    }else
+      s.textContent = 'Start Game';
+    s.id = 'pong_btn';
+    s.style.fontSize = '0.85rem';
+    _score.appendChild(s);
 
     const p2 = document.createElement('span');
     p2.id = 'player2-score';
@@ -40,15 +75,6 @@ export default class SinglePong extends Page {
     c.height = 600; // Set your desired height
     CONTAINER.appendChild(c);
 
-    // [Start || leave] btn
-    const s = document.createElement('button');
-    if(this.multiplayer)
-    {
-      s.textContent = ' ';
-    }else
-      s.textContent = 'Start Game';
-    s.id = 'startGameBtn';
-    CONTAINER.appendChild(s);
 
     this.initPong(c, s, p1, p2);
     return CONTAINER;
@@ -70,11 +96,19 @@ export default class SinglePong extends Page {
       paddles: { player1Y: canvas.height / 2 - PADDLE_HEIGHT / 2, player2Y: canvas.height / 2 - PADDLE_HEIGHT / 2 },
       score: { player1: 0, player2: 0 },
       keys: { w: false, s: false, ArrowUp: false, ArrowDown: false, ' ': false },
+      player_names: ["Player_1", "Player_2"],
+      max_score: 20,
+      ended: false
     };
     if(this.multiplayer)
     {
-      
+      if(this.game_data)
+      {
+        _g.player_names = this.game_data?.player_names;
+        _g.max_score = this.game_data?.max_score;
+      }
     }
+
     const PONG_ART = 
       `██████╗ ███████╗███╗   ██╗ ██████╗ 
       ██╔══██╗██║   ██║████╗  ██║██╔════╝ 
@@ -87,6 +121,13 @@ export default class SinglePong extends Page {
       if(this.multiplayer)
       {
         console.log("leave");
+        if(_g.ended)
+            return ;
+        if(this.socket){
+          this.socket.send(JSON.stringify({
+                type: "player_giveup"
+            }));
+        }
       }else
       {
         if(!g_started) {
@@ -108,6 +149,8 @@ export default class SinglePong extends Page {
       if(!this.socket)
           return ;
       this.socket.addEventListener('message', async (msg) => {
+        if(_g.ended)
+          return ;
         const data = JSON.parse(msg.data);
         // handle queue, creating, etc...
         if (data?.type === "game_state"){
@@ -121,8 +164,8 @@ export default class SinglePong extends Page {
               _g.score.player1 = data?.scores.p1;
               _g.score.player2 = data?.scores.p2;
 
-              p1ScoreEl.textContent = `Player 1: ${_g.score.player1}`;
-              p2ScoreEl.textContent = `Player 2: ${_g.score.player2}`;
+              p1ScoreEl.textContent = `${_g.player_names[0]}: ${_g.score.player1}`;
+              p2ScoreEl.textContent = `${_g.player_names[1]}: ${_g.score.player2}`;
             }
             if(data?.paddles)
             {
@@ -130,6 +173,11 @@ export default class SinglePong extends Page {
               _g.paddles.player2Y = data?.paddles.p2;
             }
         }
+        if(data?.type === "game_end")
+        {
+          //const E = .querySelector('#player-status') as HTMLParagraphElement;
+          _g.ended = (true);
+        } 
       });
 
     }
@@ -209,7 +257,7 @@ export default class SinglePong extends Page {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       // field
-      ctx.strokeStyle = 'white';
+      ctx.strokeStyle = _g.ended ? 'green' : 'white';
       ctx.lineWidth = 5;
       ctx.strokeRect(0, 0, canvas.width, canvas.height);
 

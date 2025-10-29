@@ -118,7 +118,7 @@ export default class PlayPage extends Page {
     };
 
     // start either multiplayer or single player
-    const start_game = async (game_mode: boolean) => 
+    const start_game = async (game_mode: boolean, game_data? : object) => 
     {
         joined_game = (true);
         p_st.style.display = 'none';
@@ -128,9 +128,10 @@ export default class PlayPage extends Page {
         if(game_mode) // multiplayer
         {
           // component
-          const pong_page = new Pong("ahh", this.router, {
+          const pong_page = new Pong("pong_ahhh_page", this.router, {
             multiplayer : true,
-            socket: (socket)
+            socket: (socket),
+            game_data: (game_data)
           });
 
           // render && append 
@@ -148,7 +149,9 @@ export default class PlayPage extends Page {
           }
       }else
       {
-
+              q_btn.style.backgroundColor = '#00AA00ff';  // Green background
+              q_btn.style.color = 'white';              // White text
+              q_btn.innerText = 'PLAY MULTIPLAYER';
       }
     };
     // (queue) btn handler
@@ -214,7 +217,8 @@ export default class PlayPage extends Page {
             }
             if(data?.type == "start")
             {
-              start_game(true);
+              // console.log(data);
+              start_game(true, data.ehh);
             }
         };
       } catch (err) {
