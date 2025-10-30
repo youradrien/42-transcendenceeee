@@ -73,7 +73,7 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
             const token_jwt = fastify.jwt.sign(jwt_content);
             return reply.setCookie('token', token_jwt, {
                     httpOnly: true,
-                    secure : false, // true if HTTPS
+                    secure : true, // true if HTTPS
                     sameSite : 'none',
                     path : '/'
             }).send({success: true});
@@ -128,7 +128,7 @@ async function userRoutes(fastify, options) // Options permet de passer des vari
             const token_jwt = fastify.jwt.sign(jwt_content);
             return reply.setCookie('token', token_jwt, {
                     httpOnly: true,
-                    secure : false, // true for HTTPS
+                    secure : true, // true for HTTPS
                     sameSite : 'none',
                     path : '/'
             }).send({success: true});

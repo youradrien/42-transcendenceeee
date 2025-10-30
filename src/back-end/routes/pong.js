@@ -142,7 +142,7 @@ async function pong_routes(fastify, options)
             p_waitingPlayers.delete(p2Id);
 
             const game_id = `${Date.now()}_${p1Id}_${p2Id}`;
-            const c = Math.floor(Math.random() * (15 - 6 + 1)) + 6; // rand int between 6 and 15
+            const c = Math.floor(Math.random() * (5 - 2 + 1)) + 2; // rand int between 6 and 15
             // p1-p2 usernames from DB -> one query
         
             const game = {
@@ -209,7 +209,7 @@ async function pong_routes(fastify, options)
                             ehh: safe_game }));
 
                         if (game) {
-                            start_game_loop(game);
+                            start_game_loop(game, fastify);
                         }
                     }
                 }, (i) * 1000); // 1 sec step
@@ -236,12 +236,13 @@ async function pong_routes(fastify, options)
         // players inputs
         connection.socket.on('message', (message) => {
             try {
+                const msg_str = message.toString('utf8'); 
+                const data = JSON.parse(msg_str);
+                // console.log(`Received message from user ${USER_ID}:`, data);
                 if(data?.type == "paddle_move")
                 {
                     // convert buffer -. string
-                    const msg_str = message.toString('utf8'); 
-                    const data = JSON.parse(msg_str);
-        
+            
                     // game exists?
                     let _game = null;
                     for (const [r, game] of fastify.p_rooms.entries()) {
@@ -271,8 +272,6 @@ async function pong_routes(fastify, options)
                 }
                 if(data?.type == "player_giveup")
                 {
-                    const msg_str = message.toString('utf8'); 
-                    const data = JSON.parse(msg_str);
         
                     // game exists?
                     let _game = null;
@@ -303,7 +302,7 @@ async function pong_routes(fastify, options)
 }
 module.exports = pong_routes;
 
-const start_game_loop = (game) =>
+const start_game_loop = (game, fastify = null) =>
 {
   const interval = setInterval(() => {
         // ball physics
@@ -327,7 +326,7 @@ const start_game_loop = (game) =>
             if(game.scores.p1 >= game.max_score 
                 || game.scores.p2 >= game.max_score
             ){
-                handle_game_end(game, "victory");
+                handle_game_end(game, "victory", fastify);
                 return; 
             }
         }
@@ -342,18 +341,24 @@ const start_game_loop = (game) =>
         }
         // paddle collisions
         // left paddle
-        if (game.ball.x >= 20 + game.paddleWidth &&
-            game.ball.x <= 20 - game.paddleWidth &&
-            game.ball.y >= game.paddles.p2 &&
-            game.ball.y <= game.paddles.p2 + game.paddleHeight
+        if (game.ball.x <= 20 + game.paddleWidth &&
+            game.ball.x >= 20 - game.paddleWidth 
+            &&
+            game.ball.y >= game.paddles.p1 &&
+            game.ball.y <= game.paddles.p1 + game.paddleHeight
         ){
+            console.log("LEFT PADDLE HIT");
             game.ball.vx = Math.abs(game.ball.vx); // bounce right
         }
         // right paddle
         if (game.ball.x >= (game.width - 30) - game.paddleWidth &&
-            game.ball.x >= (game.width - 30) + game.paddleWidth &&
-            game.ball.y >= game.paddles.p1 &&
-            game.ball.y <= game.paddles.p1 + game.paddleHeight) {
+            game.ball.x <= (game.width - 30) + game.paddleWidth 
+            &&
+            game.ball.y >= game.paddles.p2 &&
+            game.ball.y <= game.paddles.p2 + game.paddleHeight
+            )
+            {
+                console.log("rigt PADDLE HIT:  " + game.ball.x + " vs " + (game.width - 30));
             game.ball.vx = -Math.abs(game.ball.vx); // bounce left
         }
 
@@ -376,11 +381,11 @@ const start_game_loop = (game) =>
 }
 
 // game ending: 'give_up', 'victory' or 'disconnection'
-const handle_game_end = (game, reason = 'victory') => {
+const handle_game_end = (game, reason = 'victory', fastify = null) => {
   if (!game) return;
 
   clearInterval(game.interval);
-  p_rooms.delete(game.id);
+  fastify?.p_rooms.delete(game.id);
 
   const { scores, max_score, players, sockets, player_names } = game;
 

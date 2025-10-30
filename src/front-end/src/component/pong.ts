@@ -110,7 +110,7 @@ export default class SinglePong extends Page {
     }
 
     const PONG_ART = 
-      `██████╗ ███████╗███╗   ██╗ ██████╗ 
+    `██████╗ ███████╗███╗   ██╗ ██████╗ 
       ██╔══██╗██║   ██║████╗  ██║██╔════╝ 
       ██████╔╝██║   ██║██╔██╗ ██║██║  ███╗
       ██╔═══╝ ██║   ██║██║╚██╗██║██║   ██║
@@ -144,14 +144,15 @@ export default class SinglePong extends Page {
       _g.ball.speedY = DEFAULT_BALL_SPEED;
     };
 
-    const treat_socket = async () => 
-    {
+    /*const treat_socket = async () => 
+    {*/
       if(!this.socket)
           return ;
       this.socket.addEventListener('message', async (msg) => {
         if(_g.ended)
           return ;
-        const data = JSON.parse(msg.data);
+        // console.log("ws msg:", msg);
+        const data = await JSON.parse(msg.data);
         // handle queue, creating, etc...
         if (data?.type === "game_state"){
             if(data?.ball)
@@ -175,13 +176,15 @@ export default class SinglePong extends Page {
         }
         if(data?.type === "game_end")
         {
-          //const E = .querySelector('#player-status') as HTMLParagraphElement;
+          const E = document.querySelector('#max-score') as HTMLParagraphElement;
+          E.innerHTML = '';
           _g.ended = (true);
+
         } 
       });
 
-    }
-    treat_socket();
+    //}
+    //treat_socket();
 
     const update = () => {
       if(this.multiplayer)
@@ -191,10 +194,10 @@ export default class SinglePong extends Page {
         // update() state happens in tereat_socket() via ws
         // only keyboard inputs are sent in this update() loop
         let direction = null;
-        if (_g.keys.ArrowUp){
+        if (_g.keys.ArrowUp || _g.keys.w  ){
           direction = "up";
         }
-        if(_g.keys.ArrowDown){
+        if(_g.keys.ArrowDown || _g.keys.s ){
           direction = "down";
         }
         if(direction)
@@ -293,12 +296,14 @@ export default class SinglePong extends Page {
     // Event Listeners
     const handleKeyEvent = (e: KeyboardEvent, isDown: boolean) => {
       if (e.key === ' ' && isDown && !g_started) {
-        e.preventDefault();
+        /* e.preventDefault();
         g_started = true;
-        reset_ball(true);
+        reset_ball(true); */
       }
       // Check for movement keys
       else if (e.key === 'w' || e.key === 's' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault(); // ✅ Prevent arrow keys and WASD from scrolling
+        // console.log(`Key ${e.key} is now ${isDown ? 'down' : 'up'}`);
         (_g.keys as any)[e.key] = isDown;
       }
     };
